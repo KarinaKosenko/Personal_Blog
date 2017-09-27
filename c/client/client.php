@@ -6,7 +6,11 @@ use C\Base;
 use Core\System;
 use M\Auth;
 
-abstract class Client extends Base{
+/**
+ * Class Client - parent controller for other controllers of the client side.
+ */
+abstract class Client extends Base
+{
 	protected $auth;
     protected $title;
     protected $content;
@@ -14,28 +18,25 @@ abstract class Client extends Base{
 	protected $menu;
 	protected $status;
     
-    public function __construct(){
-		$this->auth = Auth::instance()->isAuth();
-		
-		if(!$this->auth) {
-			
-		}
-        else{
-			
-		}
-		
+    public function __construct()
+    {
 		$this->title = 'Наш сайт - ';
         $this->content = '';
     }
 
-	
-    public function render(){
+    /**
+     * Method to generate HTML-document (view).
+     *
+     * @return string
+     */
+    public function render()
+    {
         $html = System::template('client/v_main.php', [
             'title' => $this->title,
             'content' => $this->content,
 			'menu' => $this->menu,
 			'status' => $this->status
-         ]);
+        ]);
          
         return $html;
     } 

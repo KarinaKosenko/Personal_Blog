@@ -1,11 +1,5 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 namespace C\Admin;
 
 use M\About as Model;
@@ -14,40 +8,41 @@ use Core\Validation;
 use Core\Exceptions;
 
 /**
- * Description of about
- *
- * @author admin
+ * Class About - controller to work with About page in the admin panel.
  */
 class About extends Admin
 {
-    public function action_index(){
+    /**
+     * Method reurns About page.
+     */
+    public function action_index()
+    {
+        // Get About model.
         $mModel = Model::instance();
+        // Get About information.
         $about = $mModel->one(1);
 		
-		if(isset($_SESSION['msg'])){
-			$msg = $_SESSION['msg'] . '<hr>';
-			unset($_SESSION['msg']);
-		}
-		else{
-			$msg = '';
-		}
-		
 	    $this->title = 'главная';
-            
         $this->content = System::template('admin/v_about.php', [
-                'title' => $about['title'],
+            'title' => $about['title'],
 			'content' => $about['content'],
          ]);
     }
-    
-    
+
+    /**
+     * Method for About page edition.
+     *
+     * @throws Exceptions\E404
+     */
     public function action_edit()
     {
+        // Get About model.
         $mModel = Model::instance();
+        // Get About information.
         $about = $mModel->one($this->params[2]);
 
-        if($about === null) {
-            throw new Exceptions\E404("information with id {$this->params[2]} is not found");
+        if ($about === null) {
+            throw new Exceptions\E404("information is not found");
         }
         else {
             $this->title = 'Редактировать страницу';
@@ -59,23 +54,25 @@ class About extends Admin
                                             'msg' => $msg
                                     ]);
 
-
-            if(count($_POST) > 0) {
+            if (count($_POST) > 0) {
                 $title = $_POST['title'];
                 $content = $_POST['content'];
 
                 $obj = compact("title", "content");
 
+                // POST-request data validation.
                 $valid = new Validation($obj, $mModel->validationMap());
                 $valid->execute('edit');
 
-                if($valid->good()){   
+                if ($valid->good()) {
+                    // Update data in the database.
                     $mModel->edit($this->params[2], $valid->cleanObj());
                     $_SESSION['msg'] = 'Страница успешно отредактирована.';
                     header("Location: /admin/about");
                     exit();
                 }
-                else{
+                else {
+                    // Get validation errors.
                     $errors = $valid->errors();
                     $msg = implode('<br>', $errors);
                 }
@@ -89,3 +86,4 @@ class About extends Admin
         }
     }	
 }
+

@@ -1,30 +1,27 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 namespace M;
 
 use Core\Model;
 
 /**
- * Description of about
- *
- * @author admin
+ * Class About - a model to work with About information.
  */
-class About extends Model{
+class About extends Model
+{
     use \Core\Traits\Singleton;
 	
-    protected function __construct(){
-            parent::__construct();
-            $this->table = 'about';
-            $this->pk = 'id_info';
+    protected function __construct()
+    {
+        // Set table and primary key to work with database.
+        parent::__construct();
+        $this->table = 'about';
+        $this->pk = 'id_info';
     }
-    
-    public function validationMap(){
+
+    // Determine validation rules.
+    public function validationMap()
+    {
         return [
 			'table' => 'about',
 			'pk' => 'id_info',
@@ -32,11 +29,12 @@ class About extends Model{
             'not_empty' => ['title', 'content'],
             'min_length' => [
                 'title' => 5,
-                'content' => 10
+                'content' => 10,
             ],
 			'unique' => ['title'],
-			'html_allowed' => ['content']
+			'html_allowed' => ['content'],
         ];
     }
     
 }
+

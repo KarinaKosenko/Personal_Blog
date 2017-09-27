@@ -12,62 +12,84 @@ use Core\System;
 use Core\Validation;
 use Core\Exceptions;
 
-class Articles extends Admin{
-    
-    public function action_page(){
-        $mMessages = Model::instance($this->params[2]);
-        $all_data = $mMessages->getData();
+/**
+ * Class Articles - controller to work with articles in the admin panel.
+ */
+class Articles extends Admin
+{
+    /**
+     * Method returns a list of all articles.
+     */
+    public function action_page()
+    {
+        // Get a model to work with articles.
+        $mArticles = Model::instance($this->params[2]);
+        // Get all articles.
+        $all_data = $mArticles->getData();
+        // Get a model to work with smiles.
         $smiles = Smiles::instance();
 		
-		if(isset($_SESSION['msg'])){
-			$msg = $_SESSION['msg'] . '<hr>';
+		if (isset($_SESSION['msg'])) {
+			$msg = $_SESSION['msg'];
 			unset($_SESSION['msg']);
 		}
-		else{
+		else {
 			$msg = '';
 		}
 		
         $this->title .= 'главная';
-            
         $this->content = System::template('admin/v_articles.php', [
 		   'start' => $all_data['start'],
 		   'data' => $all_data['data'],
 		   'rows' => $all_data['rows'],
 		   'num_pages' => $all_data['num_pages'],
 		   'cur_page' => $this->params[2],
-		   'smile' => $smiles
+		   'smile' => $smiles,
+            'msg' => $msg,
          ]);
-    }    
-    
-	
-    public function action_one(){
-        $mMessages = Model::instance();
-        $article = $mMessages->one($this->params[2]);
+    }
+
+    /**
+     * One article page.
+     *
+     * @throws Exceptions\E404
+     */
+    public function action_one()
+    {
+        // Get a model to work with articles.
+        $mArticles = Model::instance();
+        // Get current article.
+        $article = $mArticles->one($this->params[2]);
+        // Search article's tags.
         $tags = Tags::instance()->searchTags($this->params[2]);
+        // Build a comment tree for current article.
         $tree = Comments::instance()->buildTree($this->params[2]);
+        // Get a model to work with smiles.
         $smiles = Smiles::instance();
-        
+        // Get all comment for current article using comment tree.
         $all_comments = Comments::instance()->getCommentsTemplate($tree);
          
-         if(count($tags) === 1 && $tags[0]['id_tag'] == null){
+        // Work with article's tags.
+        if (count($tags) === 1 && $tags[0]['id_tag'] == null) {
             $tag_string = "<a href=/admin/tags/add/" . $this->params[2] . ">Добавить теги</a>";
         }
-        else{
+        else {
            $str = '';
-            foreach($tags as $one){
+            foreach ($tags as $one) {
                 $str .= "<a href =/admin/tags/one/" . $one['id_tag'] . ">" . $one['name'] . "</a>" . ', ';
             }
             $tag_string = substr($str, 0, -2) . ".<br><a href=/admin/tags/edit/" . $this->params[2] . ">Редактировать теги</a>";
         }
         
-        if($article === null) {
+        if ($article === null) {
             throw new Exceptions\E404("article with id {$this->params[2]} is not found");
         }
-        else{
-            if(!$all_comments){
+        else {
+            // Work with article's comments.
+            if (!$all_comments) {
                 $comments = '';
             }
-            else{
+            else {
                 $comments = System::template('admin/v_comments_wrap.php' , [
                     'comments' => $all_comments,
                     'id_article' => $this->params[2],
@@ -88,59 +110,63 @@ class Articles extends Admin{
             
         }
     }
-    
-   
-   public function action_add()
+
+    /**
+     * Method for article adding.
+     */
+    public function action_add()
     {
-        $mMessages = Model::instance();
-        $mTags = Tags::instance();
+        // Get a model to work with articles.
+        $mArticles = Model::instance();
+        // Get a model to work with images.
         $mManager = Images::instance();
 		
-        if(isset($_FILES['imgfile']) && !empty($_FILES['imgfile']['name'])){
-                $result = $mManager->upload_file($_FILES['imgfile'], $_FILES['imgfile']['name']);
-
-                if(isset($result['error'])){
-                    echo $result['error'];
-                }
-                else{
-                   echo $result;
-                }
+        if (isset($_FILES['imgfile']) && !empty($_FILES['imgfile']['name'])) {
+            // Image uploading.
+            $result = $mManager->upload_file($_FILES['imgfile'], $_FILES['imgfile']['name']);
+            // Get result of image uploading (error or success).
+            if (isset($result['error'])) {
+                echo $result['error'];
             }
+            else {
+               echo $result;
+            }
+        }
         
-        if(count($_POST) > 0) {
+        if (count($_POST) > 0) {
+            // Get parameters for validation.
             $title = $_POST['title'];
             $content = $_POST['content'];
             $image_link = $_POST['image_link'];
             $author = Auth::instance()->getUserName();
             $date = date('Y-m-d');
-
             $obj = compact("title", "content", "image_link", "author", "date");
-
-            $valid = new Validation($obj, $mMessages->validationMap());
+            // Data validation.
+            $valid = new Validation($obj, $mArticles->validationMap());
             $valid->execute('add');
-			
-            if($valid->good()){   
-                $mMessages->add($valid->cleanObj());
+			// Check validation status.
+            if ($valid->good()) {
+                // Add article to database.
+                $mArticles->add($valid->cleanObj());
                 $_SESSION['msg'] = 'Статья успешно добавлена.';
                 header("Location: /admin/articles");
                 exit();
             }
-            else{
+            else {
+                // Get validation errors.
                 $errors = $valid->errors();
                 $msg = implode('<br>', $errors);
             }
         }
-        else{
+        else {
             $title = '';
             $content = '';
             $image_link = '';
-            $tags = '';
             $msg = "Пожалуйста, добавьте статью:";
             $errors = [];
         }
     
         $this->title = 'добавление статьи';
-			
         $this->content = System::template('admin/v_add.php', [
             'title' => $title,
             'content' => $content,
@@ -148,77 +174,90 @@ class Articles extends Admin{
             'msg' => $msg,
         ]);
     }
-	
-	
+
+    /**
+     * Method for articles deleting.
+     *
+     * @throws Exceptions\E404
+     */
     public function action_delete()
     {
-        $mMessages = Model::instance();
-        $article = $mMessages->one($this->params[2]);
+        // Get a model to work with articles.
+        $mArticles = Model::instance();
+        // Get chosen article.
+        $article = $mArticles->one($this->params[2]);
 
-        if($article === null){
+        if ($article === null) {
             throw new Exceptions\E404("article with id {$this->params[2]} is not found");
         }
         else {
-            $mMessages->delete($this->params[2]);
+            $mArticles->delete($this->params[2]);
             $_SESSION['msg'] = "Статья успешно удалена.";
             header("Location: /admin/articles");
             exit();	
         }
     }
-	
-	
+
+    /**
+     * Method for articles editing.
+     *
+     * @throws Exceptions\E404
+     */
     public function action_edit()
     {
-        $mMessages = Model::instance();
+        // Get a model to work with articles.
+        $mArticles = Model::instance();
+        // Get a model to work with images.
         $mManager = Images::instance();
-        $article = $mMessages->one($this->params[2]);
+        // Get chosen article.
+        $article = $mArticles->one($this->params[2]);
 
-        if($article === null) {
+        if ($article === null) {
             throw new Exceptions\E404("article with id {$this->params[2]} is not found");
         }
         else {
             $this->title = 'Редактировать новость №' . $article['id_article'];
             $msg = "Пожалуйста, отредактируйте новость.";
-
             $this->content = System::template('admin/v_add.php', [
                                             'title' => $article['title'],
                                             'content' => $article['content'],
                                             'image_link' => $article['image_link'],
                                             'msg' => $msg
                                     ]);
+            $old_title = $article['title'];
 
-            $old_title = $article['title'];			
-
-
-             if(isset($_FILES['imgfile']) && !empty($_FILES['imgfile']['name'])){
+            if (isset($_FILES['imgfile']) && !empty($_FILES['imgfile']['name'])) {
+                // Image uploading.
                 $result = $mManager->upload_file($_FILES['imgfile'], $_FILES['imgfile']['name']);
-
-                if(isset($result['error'])){
+                // Get result of image uploading.
+                if (isset($result['error'])) {
                     echo $result['error'];
                 }
-                else{
+                else {
                    echo $result;
                 }
             }
             
-            if(count($_POST) > 0) {
+            if (count($_POST) > 0) {
+                // Get data for validation.
                 $title = $_POST['title'];
                 $content = $_POST['content'];
                 $image_link = $_POST['image_link'];
                 $id_article = $article['id_article'];
-
                 $obj = compact("title", "content", "image_link", "id_article");
-
-                $valid = new Validation($obj, $mMessages->validationMap());
+                // Data validation.
+                $valid = new Validation($obj, $mArticles->validationMap());
                 $valid->execute('edit');
-
-                if($valid->good()){   
-                    $mMessages->edit($this->params[2], $valid->cleanObj());
+                // Check validation results.
+                if ($valid->good()) {
+                    // Update article in the database.
+                    $mArticles->edit($this->params[2], $valid->cleanObj());
                     $_SESSION['msg'] = 'Статья успешно отредактирована.';
                     header("Location: /admin/articles");
                     exit();
                 }
-                else{
+                else {
+                    // Get validation errors.
                     $errors = $valid->errors();
                     $msg = implode('<br>', $errors);
                 }

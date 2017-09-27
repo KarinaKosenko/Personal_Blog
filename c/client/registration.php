@@ -6,41 +6,51 @@ use M\User as Model;
 use Core\System;
 use Core\Validation;
 
-class Registration extends Client{
-    
+/**
+ * Class Registration - controller for users registration.
+ */
+class Registration extends Client
+{
+    /**
+     * Method for user registration.
+     */
     public function action_index()
     {
+        // Get model to work with registration.
         $mReg = Model::instance();
         
-        if(count($_POST) > 0) {
+        if (count($_POST) > 0) {
+            // Get user data.
             $name = $_POST['name'];
             $login = $_POST['login'];
             $password = $_POST['password'];
             $repeat_password = $_POST['repeat_password'];
-
             $obj = compact("name", "login", "password");
-
+            // Data validation.
             $valid = new Validation($obj, $mReg->validationMap());
             $valid->execute('add');
-
-            if($valid->good()){
-                if($password !== $repeat_password){
+            // Check validation status.
+            if ($valid->good()) {
+                if ($password !== $repeat_password) {
                     $msg = 'Пожалуйста, проверьте правильность ввода пароля: пароли не совпадают.';
                 }
-                else{
+                else {
+                    // Password hashing.
                     $arr = $mReg->hash_password($valid->cleanObj());
+                    // Insert record to the database.
                     $mReg->add($arr);
                     $_SESSION['msg'] = 'Пользователь успешно зарегистрирован. Теперь вы можете авторизоваться на сайте.';
                     header("Location: /articles");
                     exit();
                 }
             }
-            else{
+            else {
+                // Get validation errors.
                 $errors = $valid->errors();
                 $msg = implode('<br>', $errors);
             }
         }
-        else{
+        else {
             $name = '';
             $login = '';
             $password = '';
@@ -50,8 +60,6 @@ class Registration extends Client{
         }
     
         $this->title .= 'регистрация нового пользователя';
-		
-		
         $this->content = System::template('client/v_reg.php', [
             'name' => $name,
             'login' => $login,

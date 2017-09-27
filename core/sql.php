@@ -5,16 +5,20 @@ namespace Core;
 use PDO;
 use Core\Exceptions;
 
+/**
+ * Class Sql - class to work with database.
+ */
 class Sql
 {
     use \Core\Traits\Singleton;
     
     protected $db;
     
-    protected function __construct(){
+    protected function __construct()
+    {
+        // Include database settings.
         $settings = include_once "settings.php";
-        var_dump($settings['db']);
-        
+        // Connect to database.
         $this->db = new PDO("$driver:host=$host;dbname=$name", "$user", "$pass", [
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
         ]);
@@ -22,21 +26,30 @@ class Sql
         $this->db->exec("SET NAMES UTF8"); 
     }
 
-    public function select($sql, $params = []){
+    /**
+     * Select-query wrapper.
+     *
+     * @param $sql
+     * @param array $params
+     * @return array
+     */
+    public function select($sql, $params = [])
+    {
         $query = $this->db->prepare($sql);
         $query->execute($params);
         $this->check_query($query);
         return $query->fetchAll();
     }
-    
-    /*
-        [
-            'name' => $name,
-            'text' => $text
-        ]
-    */
-    
-    public function insert($table, $obj){
+
+    /**
+     * Insert-query wrapper.
+     *
+     * @param $table
+     * @param $obj
+     * @return string
+     */
+    public function insert($table, $obj)
+    {
         $keys = [];
         $masks = [];
         
@@ -56,12 +69,21 @@ class Sql
         
         return $this->db->lastInsertId();
     }
-    
-    
-	public function update($table, $obj, $where, $params = []){
+
+    /**
+     * Update-query wrapper.
+     *
+     * @param $table
+     * @param $obj
+     * @param $where
+     * @param array $params
+     * @return int
+     */
+	public function update($table, $obj, $where, $params = [])
+    {
         $pairs = [];
         
-        foreach($obj as $k => $v){
+        foreach ($obj as $k => $v) {
             $pairs[] = "$k=:$k";
         }
         
@@ -76,22 +98,35 @@ class Sql
         
         return $query->rowCount();
     }
-    
-    public function delete($table, $where, $params = []){
+
+    /**
+     * Delete-query wrapper.
+     *
+     * @param $table
+     * @param $where
+     * @param array $params
+     * @return int
+     */
+    public function delete($table, $where, $params = [])
+    {
         $sql = "DELETE FROM $table WHERE $where";
         $query = $this->db->prepare($sql);
         $query->execute($params);
         $this->check_query($query);
-        return $query->rowCount(); //rowCount - количество затронутых строк 
+        return $query->rowCount();
     }
-    
-    protected function check_query($query){
-        if($query->errorCode() != PDO::ERR_NONE){
+
+    /**
+     *Convert PDO errors to Exceptions Fatal.
+     *
+     * @param $query
+     * @throws Exceptions\Fatal
+     */
+    protected function check_query($query)
+    {
+        if ($query->errorCode() != PDO::ERR_NONE) {
 			throw new Exceptions\Fatal($query->errorInfo()[2]);
-			
-           /* $info = $query->errorInfo();
-            echo implode('<br>', $info);
-            exit();*/
         }
     }
 }
+

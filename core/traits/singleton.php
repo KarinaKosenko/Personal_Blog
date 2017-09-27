@@ -1,12 +1,17 @@
 <?php
  
-namespace Core\Traits;    
-        
-trait Singleton{
+namespace Core\Traits;
+
+/**
+ * Trait Singleton
+ */
+trait Singleton
+{
     protected static $singleton_instance; 
     
-    public static function instance(){
-        if(static::$singleton_instance === null){
+    public static function instance()
+    {
+        if (static::$singleton_instance === null) {
             static::$singleton_instance = new static();
         }
         
@@ -18,3 +23,4 @@ trait Singleton{
     protected function __sleep(){}
     protected function __wakeup(){}
 }
+

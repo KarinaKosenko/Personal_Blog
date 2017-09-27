@@ -1,19 +1,11 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 namespace M;
 
 use Core\Sql;
 
 /**
- * Description of search
- *
- * @author admin
+ * Class Search - a model to work with searching.
  */
 class Search 
 {
@@ -24,7 +16,7 @@ class Search
     
     public static function instance($path = 1)
     {
-        if(!isset(self::$instances[$path])){
+        if (!isset(self::$instances[$path])) {
             self::$instances[$path] = new self($path);
         }
        
@@ -33,75 +25,93 @@ class Search
 	
     protected function __construct($cur_page)
     {
-            $this->db = Sql::instance();
-            $this->table = 'articles';
-            $this->pk = 'id_article';
-            $this->per_page = 5;
-            $this->cur_page = $cur_page;
+        $this->db = Sql::instance();
+        // Determine database table.
+        $this->table = 'articles';
+        // Determine primary key.
+        $this->pk = 'id_article';
+        // Number for articles to one page.
+        $this->per_page = 5;
+        // Set current page.
+        $this->cur_page = $cur_page;
     }
-    
-    
-    public function getSearchData(string $search){
+
+    /**
+     * Method for data searching in the database.
+     *
+     * @param $string
+     * @return array
+     */
+    public function searchData($string)
+    {
+        $search = $this->getSearchData($string);
+        $start = ($this->cur_page - 1) * $this->per_page;
+
+        if ($search == null) {
+            $data = [];
+            $rows = 0;
+        }
+        else {
+            $data = $this->db->select("SELECT SQL_CALC_FOUND_ROWS *,
+									  MATCH `title` AGAINST ('$search*' IN BOOLEAN MODE) + "
+                . "MATCH `content` AGAINST ('$search*' IN BOOLEAN MODE) as relev "
+                . "FROM `articles` "
+                . "WHERE MATCH `title` AGAINST ('$search*' IN BOOLEAN MODE) + "
+                . "MATCH `content` AGAINST ('$search*' IN BOOLEAN MODE) > 0 "
+                . "ORDER BY relev DESC LIMIT $start, $this->per_page");
+
+
+            $get_rows = $this->db->select("SELECT FOUND_ROWS()");
+            $rows = $get_rows[0]["FOUND_ROWS()"];
+        }
+
+        $num_pages = ceil($rows / $this->per_page);
+        $obj = compact("data", "rows", "start", "num_pages");
+
+        return $obj;
+    }
+
+    /**
+     * Method for valid search data generation.
+     *
+     * @param string $search
+     * @return bool|mixed|string|void
+     */
+    protected function getSearchData(string $search)
+    {
+        // Crop extra characters.
         $search = substr($search, 0, 100);
+        // Replace forbidden characters.
         $search = preg_replace("/[^\w\x7F-\xFF\s]/", " ", $search);
-        
+        // Get keywords array.
         $array = explode(' ', $search);
         $valid_array = [];
-        
-        if(count($array) > 0){
-            foreach($array as $one){
+        // Array validation.
+        if (count($array) > 0) {
+            foreach ($array as $one) {
                 $one = trim($one);
-                if(strlen($one) > 2){
-					if(strlen($one) > 12){
+                if (strlen($one) > 2) {
+					if (strlen($one) > 12) {
 						$one = substr($one, 0, (strlen($one) - 4));
 					}
-                   
 				   $valid_array[] = $one;
                 }
-				else{
+				else {
 					return;
 				}
             }
-            
-            if(count($valid_array) === 0){
+            if (count($valid_array) === 0) {
                 return;
             }
-            else{
+            else {
                 $search = implode('* ', $valid_array);
                 return $search;
             }
         }
-        else{
+        else {
             return;
         }
     }
-    
-    public function searchData($string){
-        $search = $this->getSearchData($string);
-		$start = ($this->cur_page - 1) * $this->per_page;
-		
-		if($search == null){
-			$data = [];
-			$rows = 0;
-		}
-		else{
-			$data = $this->db->select("SELECT SQL_CALC_FOUND_ROWS *,
-									  MATCH `title` AGAINST ('$search*' IN BOOLEAN MODE) + "
-									. "MATCH `content` AGAINST ('$search*' IN BOOLEAN MODE) as relev "
-									. "FROM `articles` "
-									. "WHERE MATCH `title` AGAINST ('$search*' IN BOOLEAN MODE) + "
-									. "MATCH `content` AGAINST ('$search*' IN BOOLEAN MODE) > 0 "
-									. "ORDER BY relev DESC LIMIT $start, $this->per_page");
-		
-        
-			$get_rows = $this->db->select("SELECT FOUND_ROWS()");
-			$rows = $get_rows[0]["FOUND_ROWS()"];
-		}
-       
-	   $num_pages = ceil($rows / $this->per_page);
-
-        $obj = compact("data", "rows", "start", "num_pages");
-		
-        return $obj;
-    }
 }
+
+
